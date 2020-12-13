@@ -291,7 +291,7 @@ Alla fine e' cambiata la matrice M del nodo stesso e tutte le matrici degli alli
 
 
 ******************************/
-double AlignGlobal::Node::AlignWithActiveAdj(bool Rigid)
+double AlignGlobal::Node::AlignWithActiveAdj(AlignPair::Param::MatchModeEnum mmode)
 {
   list<VirtAlign *>::iterator li;
 
@@ -335,8 +335,9 @@ double AlignGlobal::Node::AlignWithActiveAdj(bool Rigid)
   Matrix44d out;
   //if(Rigid) ret=ComputeRigidMatchMatrix(out,FixP,MovP);
   //else ret=ComputeMatchMatrix2(out,FixP,FixN,MovP);
-  if(Rigid) ComputeRigidMatchMatrix(FixP,MovP,out);
-  else vcg::PointMatchingScale::computeRotoTranslationScalingMatchMatrix(out,FixP,MovP);
+  if(mmode == AlignPair::Param::MMRigid) ComputeRigidMatchMatrix(FixP,MovP,out);
+  else if (mmode == AlignPair::Param::MMSimilarity) vcg::PointMatchingScale::computeRotoTranslationScalingMatchMatrix(out,FixP,MovP);
+  else ComputeAffineMatchMatrix(FixP, MovP, out);
 
   Matrix44d outIn=vcg::Inverse(out);
   //double maxdiff = MatrixNorm(out);
@@ -429,7 +430,7 @@ Per ogni componente connessa,
 
 ******************************/
 
-bool AlignGlobal::GlobalAlign(const std::map<int,string> &Names, 	const double epsilon, int maxiter, bool Rigid, FILE *elfp, CallBackPos* cb )
+bool AlignGlobal::GlobalAlign(const std::map<int,string> &Names, 	const double epsilon, int maxiter, AlignPair::Param::MatchModeEnum mmode, FILE *elfp, CallBackPos* cb )
 {
     double change;
     int step = 0, localmaxiter;
@@ -479,7 +480,7 @@ bool AlignGlobal::GlobalAlign(const std::map<int,string> &Names, 	const double e
             curr=Q.front();
             Q.pop();
             curr->Queued=false;
-            change=curr->AlignWithActiveAdj(Rigid);
+            change=curr->AlignWithActiveAdj(mmode);
             step++;
             LOG(elfp,"     Step %5i Queue size %5i Moved %4i  err %10.4f\n",step,Q.size(),curr->id,change);
             if(change>epsilon)

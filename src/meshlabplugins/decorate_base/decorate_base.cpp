@@ -32,6 +32,9 @@
 #include <QGLShader>
 #include <meshlab/glarea_setting.h>
 #include <wrap/gl/gl_type_name.h>
+
+#include <Eigen/SVD>
+
 using namespace vcg;
 using namespace std;
 
@@ -41,6 +44,7 @@ QString DecorateBasePlugin::decorationInfo(FilterIDType filter) const
     switch(filter)
     {
     case DP_SHOW_AXIS:              return tr("Draw XYZ axes in world coordinates");
+    case DP_SHOW_SCALING_DIRECTIONS:return tr("Draw object's scaling directions according to its current transformation");
     case DP_SHOW_BOX_CORNERS:       return tr("Draw object's bounding box corners");
     case DP_SHOW_NORMALS:           return tr("Draw per vertex/face normals");
     case DP_SHOW_CURVATURE:         return tr("Draw per vertex/face principal curvature directions");
@@ -68,6 +72,7 @@ QString DecorateBasePlugin::decorationName(FilterIDType filter) const
     case DP_SHOW_CURVATURE:         return QString("Show Curvature");
     case DP_SHOW_BOX_CORNERS:       return QString("Show Box Corners");
     case DP_SHOW_AXIS:              return QString("Show Axis");
+    case DP_SHOW_SCALING_DIRECTIONS:return QString("Show Scaling Directions");
     case DP_SHOW_LABEL:             return QString("Show Labels");
     case DP_SHOW_CAMERA:            return QString("Show Camera");
     case DP_SHOW_TEXPARAM:          return QString("Show UV Tex Param");
@@ -173,6 +178,52 @@ void DecorateBasePlugin::decorateMesh(const QAction* a, MeshModel &m, const Rich
     glMultMatrix(m.cm.Tr);
     switch (ID(a))
     {
+    case DP_SHOW_SCALING_DIRECTIONS:
+        {
+            Eigen::Matrix4d T;
+            m.cm.Tr.ToEigenMatrix(T);
+            Eigen::Matrix3d M = T.block(0, 0, 3, 3);
+            Eigen::JacobiSVD<Eigen::Matrix3d> svd;
+            svd.compute(M, Eigen::ComputeFullU | Eigen::ComputeFullV);
+            T.block(0, 0, 3, 3) = svd.matrixV();
+            T.block(0, 0, 3, 3) = svd.matrixU();
+
+            Matrix44m scaleDirMat;
+            scaleDirMat.FromEigenMatrix(T);
+
+            glPushMatrix();
+            glMultMatrix(Inverse(m.cm.Tr));
+            glPushMatrix();
+            glMultMatrix(scaleDirMat);
+
+            CoordinateFrame scaleAxes((m.cm.bbox.Diag() * 1.05) * std::abs(T.determinant()));
+            scaleAxes.xcolor = vcg::Color4b(253, 231,  37, 255);
+            scaleAxes.ycolor = vcg::Color4b( 33, 145, 130, 255);
+            scaleAxes.zcolor = vcg::Color4b( 68,   1,  84, 255);
+            scaleAxes.drawlabels = true;
+            scaleAxes.xlabel = QString("Dir 0");
+            scaleAxes.ylabel = QString("Dir 1");
+            scaleAxes.zlabel = QString("Dir 2");
+            scaleAxes.Render(gla, painter);
+
+            glPopMatrix();
+            glPopMatrix();
+
+            this->realTimeLog("Scaling coefficients", m.label(), "<table>"
+                              "<tr><td> Dir 0  </td><td width=70 align=right>  %7.4f   </td></tr>"
+                              "<tr><td> Dir 1  </td><td width=70 align=right>  %7.4f   </td></tr>"
+                              "<tr><td> Dir 2  </td><td width=70 align=right>  %7.4f   </td></tr>"
+                              "</table>",
+                              svd.singularValues()[0], svd.singularValues()[1], svd.singularValues()[2]);
+
+            this->realTimeLog("Scaling directions", m.label(), "<table>"
+                              "<tr><td> Dir 0  </td><td width=70 align=right>  %1.4f   </td><td width=70 align=right>  %1.4f    </td><td width=70 align=right>   %1.4f   </td></tr>"
+                              "<tr><td> Dir 1  </td><td width=70 align=right>  %1.4f   </td><td width=70 align=right>  %1.4f    </td><td width=70 align=right>   %1.4f   </td></tr>"
+                              "<tr><td> Dir 2  </td><td width=70 align=right>  %1.4f   </td><td width=70 align=right>  %1.4f    </td><td width=70 align=right>   %1.4f   </td></tr>"
+                              "</table>",
+                              T(0,0), T(1,0), T(2,0), T(0,1), T(1,1), T(2,1), T(0,2), T(1,2), T(2,2));
+        }
+        break;
 
     case DP_SHOW_CURVATURE:
         {
@@ -520,6 +571,7 @@ int DecorateBasePlugin::getDecorationClass(const QAction *action) const
     case DP_SHOW_QUALITY_CONTOUR :
     case DP_SHOW_BOX_CORNERS :
     case DP_SHOW_LABEL :
+    case DP_SHOW_SCALING_DIRECTIONS :
     case DP_SHOW_TEXPARAM : return DecorateBasePlugin::PerMesh;
     case DP_SHOW_AXIS : return DecorateBasePlugin::PerDocument;
     case DP_SHOW_CAMERA : return DecorateBasePlugin::PerDocument;

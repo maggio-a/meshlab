@@ -45,7 +45,8 @@ class DecorateBasePlugin : public QObject, public DecoratePluginInterface
   QString pluginName() const;
 
   enum {
-	DP_SHOW_AXIS,
+    DP_SHOW_AXIS,
+    DP_SHOW_SCALING_DIRECTIONS,
 	DP_SHOW_BOX_CORNERS,
 	DP_SHOW_SELECTED_MESH,
 	DP_SHOW_CAMERA,
@@ -71,7 +72,8 @@ public:
   DecorateBasePlugin()
   {
 	  typeList <<
-		DP_SHOW_AXIS <<
+        DP_SHOW_AXIS <<
+        DP_SHOW_SCALING_DIRECTIONS <<
 		DP_SHOW_BOX_CORNERS <<
 		DP_SHOW_SELECTED_MESH <<
 		DP_SHOW_CAMERA << 

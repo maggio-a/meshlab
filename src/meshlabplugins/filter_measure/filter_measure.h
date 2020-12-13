@@ -41,7 +41,8 @@ public:
 			PER_VERTEX_QUALITY_STAT,
 			PER_FACE_QUALITY_STAT,
 			PER_VERTEX_QUALITY_HISTOGRAM,
-			PER_FACE_QUALITY_HISTOGRAM
+            PER_FACE_QUALITY_HISTOGRAM,
+            COMPUTE_MATRIX_SVD_DATA
 		 } ;
 
 	FilterMeasurePlugin();
@@ -61,11 +62,12 @@ private:
 	bool computeTopologicalMeasures(MeshDocument& md);
 	bool computeTopologicalMeasuresForQuadMeshes(MeshDocument& md);
 	bool computeGeometricMeasures(MeshDocument& md);
-	bool computeAreaPerimeterOfSelection(MeshDocument& md);
-	bool perVertexQualityStat(MeshDocument& md);
+    bool computeMatrixSVDData(MeshDocument& md);
+    bool computeAreaPerimeterOfSelection(MeshDocument& md);
+    bool perVertexQualityStat(MeshDocument& md);
 	bool perFaceQualityStat(MeshDocument& md);
 	bool perVertexQualityHistogram(MeshDocument& md, float RangeMin, float RangeMax, int binNum, bool areaFlag);
-	bool perFaceQualityHostogram(MeshDocument& md, float RangeMin, float RangeMax, int binNum, bool areaFlag);
+    bool perFaceQualityHistogram(MeshDocument& md, float RangeMin, float RangeMax, int binNum, bool areaFlag);
 
 
 	Matrix33m computePrincipalAxisCloud(CMeshO & m);

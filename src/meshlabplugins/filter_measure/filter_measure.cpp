@@ -48,7 +48,8 @@ FilterMeasurePlugin::FilterMeasurePlugin()
 			 << PER_VERTEX_QUALITY_STAT
 			 << PER_FACE_QUALITY_STAT
 			 << PER_VERTEX_QUALITY_HISTOGRAM
-			 << PER_FACE_QUALITY_HISTOGRAM;
+             << PER_FACE_QUALITY_HISTOGRAM
+             << COMPUTE_MATRIX_SVD_DATA;
 
 	for(FilterIDType tt : types())
 		actionList << new QAction(filterName(tt), this);
@@ -85,7 +86,9 @@ QString FilterMeasurePlugin::filterName(FilterIDType filterId) const
 		break;
 	case PER_FACE_QUALITY_HISTOGRAM:
 		return "Per Face Quality Histogram";
-		break;
+        break;
+    case COMPUTE_MATRIX_SVD_DATA:
+        return "Matrix: Compute SVD data";
 	default:
 		assert(0);
 		return "";
@@ -118,16 +121,24 @@ QString FilterMeasurePlugin::filterName(FilterIDType filterId) const
 		break;
 	case PER_FACE_QUALITY_HISTOGRAM:
 		return "Compute an histogram of the values of the per-face quality.";
-		break;
+        break;
+    case COMPUTE_MATRIX_SVD_DATA:
+        return "Compute the SVD data of the current mesh matrix.";
+        break;
 	default:
 		assert(0);
 		return "";
 	}
 }
 
-FilterMeasurePlugin::FilterClass FilterMeasurePlugin::getClass(const QAction *) const
+FilterMeasurePlugin::FilterClass FilterMeasurePlugin::getClass(const QAction *a) const
 {
-	return FilterPluginInterface::Measure;
+    switch (ID(a)) {
+    case COMPUTE_MATRIX_SVD_DATA:
+        return  FilterClass(Layer + Measure);
+    default:
+        return FilterPluginInterface::Measure;
+    }
 }
 
 FilterPluginInterface::FILTER_ARITY FilterMeasurePlugin::filterArity(const QAction*) const
@@ -196,8 +207,10 @@ bool FilterMeasurePlugin::applyFilter(const QAction* filter, MeshDocument& md, s
 		return perVertexQualityHistogram(md, parlst.getFloat("HistMin"), parlst.getFloat("HistMax"), parlst.getInt("binNum"), parlst.getBool("areaWeighted"));
 		break;
 	case PER_FACE_QUALITY_HISTOGRAM:
-		return perFaceQualityHostogram(md, parlst.getFloat("HistMin"), parlst.getFloat("HistMax"), parlst.getInt("binNum"), parlst.getBool("areaWeighted"));
-		break;
+        return perFaceQualityHistogram(md, parlst.getFloat("HistMin"), parlst.getFloat("HistMax"), parlst.getInt("binNum"), parlst.getBool("areaWeighted"));
+        break;
+    case COMPUTE_MATRIX_SVD_DATA:
+        return computeMatrixSVDData(md);
 	default:
 		assert(0);
 		return false;
@@ -457,6 +470,43 @@ bool FilterMeasurePlugin::computeGeometricMeasures(MeshDocument& md)
 	return true;
 }
 
+bool FilterMeasurePlugin::computeMatrixSVDData(MeshDocument& md)
+{
+    typedef Eigen::Matrix<MESHLAB_SCALAR, 4, 4> EigenMat4;
+    typedef Eigen::Matrix<MESHLAB_SCALAR, 3, 3> EigenMat3;
+
+    CMeshO &m = md.mm()->cm;
+
+    EigenMat4 T;
+    m.Tr.ToEigenMatrix(T);
+
+    EigenMat3 M = T.block(0, 0, 3, 3);
+
+    Eigen::JacobiSVD<EigenMat3> svd;
+    svd.compute(M, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+    EigenMat3 U = svd.matrixU();
+    EigenMat3 V = svd.matrixV();
+    EigenMat3 S = svd.singularValues().asDiagonal();
+
+    log("Left singular vectors are:");
+    log(" U0 | %9.6f  %9.6f  %9.6f |", U(0, 0), U(1, 0), U(2, 0));
+    log(" U1 | %9.6f  %9.6f  %9.6f |", U(0, 1), U(1, 1), U(2, 1));
+    log(" U2 | %9.6f  %9.6f  %9.6f |", U(0, 2), U(1, 2), U(2, 2));
+
+    log("Right singular vectors are:");
+    log(" V0 | %9.6f  %9.6f  %9.6f |", V(0, 0), V(1, 0), V(2, 0));
+    log(" V1 | %9.6f  %9.6f  %9.6f |", V(0, 1), V(1, 1), V(2, 1));
+    log(" V2 | %9.6f  %9.6f  %9.6f |", V(0, 2), V(1, 2), V(2, 2));
+
+    log("Singular values are:");
+    log("    | %9.6f  %9.6f  %9.6f |", S(0, 0), S(1, 1), S(2, 2));
+
+    log("Matrix determinant is %9.6f", M.determinant());
+
+    return true;
+}
+
 bool FilterMeasurePlugin::computeAreaPerimeterOfSelection(MeshDocument& md)
 {
 	CMeshO &m = md.mm()->cm;
@@ -577,7 +627,7 @@ bool FilterMeasurePlugin::perVertexQualityHistogram(MeshDocument& md, float Rang
 	return true;
 }
 
-bool FilterMeasurePlugin::perFaceQualityHostogram(MeshDocument& md, float RangeMin, float RangeMax, int binNum, bool areaFlag)
+bool FilterMeasurePlugin::perFaceQualityHistogram(MeshDocument& md, float RangeMin, float RangeMax, int binNum, bool areaFlag)
 {
 	CMeshO &m = md.mm()->cm;
 	tri::Allocator<CMeshO>::CompactEveryVector(m);

@@ -26,6 +26,8 @@
 #include <list>
 #include <queue>
 #include <wrap/callback.h>
+#include <vcg/complex/algorithms/align_pair.h>
+
 namespace vcg
 {
 
@@ -94,7 +96,7 @@ public:
   bool Queued;
   bool Discarded;
   // Allinea un nodo con tutti i suoi vicini
-  double AlignWithActiveAdj(bool Rigid);
+  double AlignWithActiveAdj(AlignPair::Param::MatchModeEnum mmode);
   double MatrixNorm(Matrix44d &NewM) const;
   double MatrixBoxNorm(Matrix44d &NewM,Box3d &bb) const;
   int PushBackActiveAdj(std::queue<Node *>	&Q);
@@ -115,7 +117,7 @@ public:
 	Node *ChooseDormantWithMostActiveLink  ();
   void MakeAllDormant();
   void Clear();
-  bool GlobalAlign(const std::map<int,std::string> &Names, 	const double epsilon, int maxiter, bool Rigid, FILE *elfp=0, CallBackPos * cb=DummyCallBackPos );
+  bool GlobalAlign(const std::map<int,std::string> &Names, 	const double epsilon, int maxiter, AlignPair::Param::MatchModeEnum mmode, FILE *elfp=0, CallBackPos * cb=DummyCallBackPos );
 
     bool CheckGraph();
 

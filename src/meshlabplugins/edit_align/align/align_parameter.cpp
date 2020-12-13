@@ -37,7 +37,19 @@ void AlignParameter::RichParameterSetToAlignPairParam(const RichParameterList &r
   app.SampleMode      =rps.getBool( "SampleMode")?AlignPair::Param::SMNormalEqualized  : AlignPair::Param::SMRandom;
   app.ReduceFactorPerc=rps.getFloat("ReduceFactorPerc");
   app.PassHiFilter    =rps.getFloat("PassHiFilter");
-  app.MatchMode       =rps.getBool( "MatchMode")? AlignPair::Param::MMRigid : AlignPair::Param::MMSimilarity;
+  int mm = rps.getEnum("MatchMode");
+  switch (mm) {
+  case 0:
+      app.MatchMode = AlignPair::Param::MMSimilarity;
+      break;
+  case 2:
+      app.MatchMode = AlignPair::Param::MMAffine;
+      break;
+  case 1:
+  default:
+      app.MatchMode = AlignPair::Param::MMRigid;
+      break;
+  }
 }
 
 // given an alignment parameter builds the corresponding RichParameterSet (dual of the retrieveParemeterSet)
@@ -54,7 +66,11 @@ void AlignParameter::AlignPairParamToRichParameterSet(const AlignPair::Param &ap
   rps.addParam(RichBool("SampleMode",app.SampleMode == AlignPair::Param::SMNormalEqualized,"Normal Equalized Sampling","if true (default) the sample points of icp are chosen with a distribution uniform with respect to the normals of the surface. Otherwise they are distributed in a spatially uniform way."));
   rps.addParam(RichFloat("ReduceFactorPerc",app.ReduceFactorPerc,"MSD Reduce Factor","At each ICP iteration the Minimal Starting Distance is reduced to be 5 times the <Reduce Factor> percentile of the sample distances (e.g. if RF is 0.9 the new Minimal Starting Distance is 5 times the value <X> such that 90% of the sample lies at a distance lower than <X>."));
   rps.addParam(RichFloat("PassHiFilter",app.PassHiFilter,"Sample Cut High","At each ICP iteration all the sample that are farther than the <cuth high> percentile are discarded ( In practice we use only the <cut high> best results )."));
-  rps.addParam(RichBool("MatchMode",app.MatchMode == AlignPair::Param::MMRigid,"Rigid matching","If true the ICP is cosntrained to perform matching only through roto-translations (no scaling allowed). If false a more relaxed transformation matrix is allowed (scaling and shearing can appear)."));
+  rps.addParam(RichEnum("MatchMode",
+                        app.MatchMode,
+                        QStringList() << "Similarity" << "Rigid" << "Affine",
+                        "Matching type",
+                        "Select the type of matching transform to use for the ICP. Rigid = roto-translations only, Similarity = allow uniform scaling, Affine = allow anisotropic scaling"));
 }
 
 void AlignParameter::RichParameterSetToMeshTreeParam(const RichParameterList &fps , MeshTree::Param &mtp)

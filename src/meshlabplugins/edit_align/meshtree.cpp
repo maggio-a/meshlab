@@ -251,7 +251,7 @@ void MeshTree::ProcessGlobal(vcg::AlignPair::Param &ap)
 	AG.BuildGraph(ResVecPtr, GluedTrVec, GluedIdVec);
 
 	float StartGlobErr = 0.001f;
-	while(!AG.GlobalAlign(names, 	StartGlobErr, 100, ap.MatchMode==vcg::AlignPair::Param::MMRigid, stdout)){
+    while(!AG.GlobalAlign(names, 	StartGlobErr, 100, ap.MatchMode, stdout)){
 		StartGlobErr*=2;
 		AG.BuildGraph(ResVecPtr,GluedTrVec, GluedIdVec);
 	}
@@ -260,8 +260,10 @@ void MeshTree::ProcessGlobal(vcg::AlignPair::Param &ap)
 	AG.GetMatrixVector(GluedTrVecOut,GluedIdVec);
 
 	//Now get back the results!
-	for(size_t ii=0; ii<GluedTrVecOut.size(); ++ii)
-		MM(GluedIdVec[ii])->cm.Tr.Import(GluedTrVecOut[ii]);
+    for(size_t ii=0; ii<GluedTrVecOut.size(); ++ii) {
+        std::cout << " *********************** Updating" << std::endl;
+        MM(GluedIdVec[ii])->cm.Tr.Import(GluedTrVecOut[ii]);
+    }
 
 	cb(0,qUtf8Printable(buf.sprintf("Completed Global Alignment (error bound %6.4f)\n",StartGlobErr)));
 
