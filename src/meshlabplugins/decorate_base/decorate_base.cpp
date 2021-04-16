@@ -188,6 +188,11 @@ void DecorateBasePlugin::decorateMesh(const QAction* a, MeshModel &m, const Rich
             T.block(0, 0, 3, 3) = svd.matrixV();
             T.block(0, 0, 3, 3) = svd.matrixU();
 
+            vcg::Point3d o = m.cm.Tr * m.cm.bbox.Center();
+            T(0, 3) = o.X();
+            T(1, 3) = o.Y();
+            T(2, 3) = o.Z();
+
             Matrix44m scaleDirMat;
             scaleDirMat.FromEigenMatrix(T);
 
@@ -196,14 +201,20 @@ void DecorateBasePlugin::decorateMesh(const QAction* a, MeshModel &m, const Rich
             glPushMatrix();
             glMultMatrix(scaleDirMat);
 
-            CoordinateFrame scaleAxes((m.cm.bbox.Diag() * 1.05) * std::abs(T.determinant()));
+            CoordinateFrame scaleAxes((m.cm.bbox.Diag() * rm->getDynamicFloat("ScalingDirLen")) * std::abs(T.determinant()));
             scaleAxes.xcolor = vcg::Color4b(253, 231,  37, 255);
             scaleAxes.ycolor = vcg::Color4b( 33, 145, 130, 255);
             scaleAxes.zcolor = vcg::Color4b( 68,   1,  84, 255);
-            scaleAxes.drawlabels = true;
+
+            scaleAxes.xcolor = vcg::Color4b(254,  33,  61, 255);
+            scaleAxes.ycolor = vcg::Color4b(  0, 216,  87, 255);
+            scaleAxes.zcolor = vcg::Color4b(  0, 147, 255, 255);
+
             scaleAxes.xlabel = QString("Dir 0");
             scaleAxes.ylabel = QString("Dir 1");
             scaleAxes.zlabel = QString("Dir 2");
+            scaleAxes.drawlabels = true;
+            scaleAxes.linewidth = rm->getDynamicFloat("ScalingDirWidth");
             scaleAxes.Render(gla, painter);
 
             glPopMatrix();
@@ -1133,6 +1144,12 @@ void DecorateBasePlugin::initGlobalParameterList(const QAction* action, RichPara
 
 switch(ID(action))
 {
+    case DP_SHOW_SCALING_DIRECTIONS :
+    {
+        parset.addParam(RichDynamicFloat("ScalingDirWidth", 3.0f, 1.0f, 5.0f, "Directions width", "Width of the displayed scaling directions"));
+        parset.addParam(RichDynamicFloat("ScalingDirLen", 1.0f, 0.1f, 5.0f, "Directions length", "Length of the displayed scaling directions"));
+    } break;
+
     case DP_SHOW_BOX_CORNERS :
 	{
 		parset.addParam(RichBool(this->BBAbsParam(), false, "Draw Untransformed","If true the bbox is drawn in the original, untransformed position "
